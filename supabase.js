@@ -1,2 +1,2 @@
-const SUPABASE_URL = 'https://your-project-id.supabase.co';
-const SUPABASE_KEY = 'your-anon-key';
+const SUPABASE_URL = 'https://xpsvdiriwadnexrgzlma.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhwc3ZkaXJpd2FkbmV4cmd6bG1hIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzODAwMzksImV4cCI6MjA4MDk1NjAzOX0.7oHVOwbKyy1Y1Ti00MBFJRkpDXE8LXEwnBUkdXo79ZI';
