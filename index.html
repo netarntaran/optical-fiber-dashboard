@@ -4,20 +4,311 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Optical Fiber Work Tracking Dashboard</title>
-    
     <!-- External Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Local CSS -->
-    <link rel="stylesheet" href="style.css">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <!-- STYLES -->
+    <style>
+        /* ===== BASE STYLES ===== */
+        :root {
+            --primary-blue: #2563eb;
+            --primary-blue-dark: #1d4ed8;
+            --primary-blue-light: #3b82f6;
+            --secondary-green: #10b981;
+            --secondary-red: #ef4444;
+            --secondary-yellow: #f59e0b;
+            --secondary-purple: #8b5cf6;
+            --dark-1: #111827;
+            --dark-2: #1f2937;
+            --dark-3: #374151;
+            --dark-4: #4b5563;
+            --light-1: #f9fafb;
+            --light-2: #f3f4f6;
+            --light-3: #e5e7eb;
+            --light-4: #d1d5db;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: var(--light-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== LOADING SCREEN ===== */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark-1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--light-3);
+            border-top: 4px solid var(--primary-blue);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* ===== MODALS ===== */
+        .login-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(17, 24, 39, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+
+        .login-content {
+            background: var(--dark-2);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* ===== HEADER ===== */
+        .main-header {
+            background: var(--dark-2);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--dark-3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: var(--primary-blue);
+        }
+
+        /* ===== FORM STYLES ===== */
+        .form-card {
+            background: var(--dark-2);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--dark-3);
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--dark-3);
+            border: 1px solid var(--dark-4);
+            border-radius: 8px;
+            color: var(--light-1);
+            font-size: 0.95rem;
+        }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-blue-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: var(--secondary-green);
+            color: white;
+        }
+
+        /* ===== TABLE STYLES ===== */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--dark-2);
+        }
+
+        .data-table th {
+            padding: 1rem;
+            text-align: left;
+            background: var(--dark-3);
+            border-bottom: 2px solid var(--dark-4);
+        }
+
+        .data-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--dark-3);
+        }
+
+        .data-table tr:hover {
+            background: var(--dark-3);
+        }
+
+        /* ===== RESPONSIVE DESIGN ===== */
+        @media (max-width: 768px) {
+            .main-header {
+                flex-direction: column;
+                gap: 1rem;
+                padding: 1rem;
+            }
+            
+            .form-card {
+                padding: 1rem;
+            }
+        }
+
+        /* ===== ADDITIONAL STYLES ===== */
+        .tab-content {
+            display: none;
+            padding: 2rem;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            color: var(--light-4);
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .nav-btn.active {
+            background: var(--primary-blue);
+            color: white;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--dark-2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--dark-3);
+        }
+
+        .chart-container {
+            background: var(--dark-2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--dark-3);
+            margin-bottom: 1.5rem;
+        }
+
+        .chart-wrapper {
+            height: 300px;
+            position: relative;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-live {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--secondary-green);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .status-not-live {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--secondary-yellow);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .success-message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--secondary-green);
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateX(150%);
+            transition: transform 0.3s;
+        }
+
+        .success-message.show {
+            transform: translateX(0);
+        }
+    </style>
 </head>
 <body>
     <!-- Loading Screen -->
@@ -31,15 +322,7 @@
     <!-- Success Message -->
     <div class="success-message" id="success-message">
         <i class="fas fa-check-circle"></i>
-        <span id="success-text">Data entered successfully!</span>
-    </div>
-
-    <!-- Photo View Modal -->
-    <div class="photo-view-modal" id="photo-view-modal">
-        <div class="photo-view-content">
-            <button class="close-photo-view">&times;</button>
-            <img id="photo-view-img" src="" alt="Photo">
-        </div>
+        <span id="success-text">Operation successful!</span>
     </div>
 
     <!-- Login Modal -->
@@ -61,13 +344,13 @@
                     <label for="password"><i class="fas fa-lock"></i> Password</label>
                     <input type="password" id="password" placeholder="Enter password" required>
                 </div>
-                <div class="login-error" id="login-error">
+                <div class="login-error" id="login-error" style="color: #ef4444; display: none; margin: 1rem 0;">
                     <i class="fas fa-exclamation-triangle"></i> Invalid username or password
                 </div>
-                <button type="submit" class="btn-login">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
                     <i class="fas fa-sign-in-alt"></i> Login to Dashboard
                 </button>
-                <div class="login-footer">
+                <div class="login-footer" style="margin-top: 1.5rem; text-align: center; color: #d1d5db; font-size: 0.85rem;">
                     <p><i class="fas fa-info-circle"></i> Default: username: <strong>101214</strong> | password: <strong>101214</strong></p>
                 </div>
             </form>
@@ -75,82 +358,66 @@
     </div>
 
     <!-- Main Container -->
-    <div class="container" id="main-container">
+    <div class="container" id="main-container" style="display: none;">
         <!-- Header -->
         <header class="main-header">
             <div class="header-left">
                 <div class="logo">
                     <i class="fas fa-satellite-dish"></i>
                     <div>
-                        <h1>Optical Fiber Dashboard</h1>
-                        <p class="subtitle">Real-time Work Tracking & Management</p>
+                        <h1 style="font-size: 1.5rem; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Optical Fiber Dashboard</h1>
+                        <p style="font-size: 0.875rem; color: #d1d5db;">Real-time Work Tracking & Management</p>
                     </div>
                 </div>
             </div>
             
             <div class="header-center">
-                <div class="quick-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-ruler-combined"></i>
+                <div class="quick-stats" style="display: flex; gap: 1.5rem;">
+                    <div class="stat-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #374151; border-radius: 8px;">
+                        <i class="fas fa-ruler-combined" style="color: #3b82f6;"></i>
                         <span id="header-total-scope">0 m</span>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-check-circle"></i>
+                    <div class="stat-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #374151; border-radius: 8px;">
+                        <i class="fas fa-check-circle" style="color: #10b981;"></i>
                         <span id="header-completed">0 m</span>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-clock"></i>
-                        <span id="header-pending">0 m</span>
-                    </div>
-                    <div class="stat-item">
-                        <i class="fas fa-signal"></i>
+                    <div class="stat-item" style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: #374151; border-radius: 8px;">
+                        <i class="fas fa-signal" style="color: #8b5cf6;"></i>
                         <span id="header-live">0%</span>
                     </div>
                 </div>
             </div>
             
             <div class="header-right">
-                <div class="user-info">
+                <div class="user-info" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem; background: #374151; border-radius: 8px;">
                     <div class="user-avatar">
-                        <i class="fas fa-user-circle"></i>
+                        <i class="fas fa-user-circle" style="font-size: 2rem; color: #3b82f6;"></i>
                     </div>
                     <div class="user-details">
-                        <span class="user-name">Bikramjeet Singh</span>
-                        <span class="user-role">Project Manager</span>
+                        <span style="font-weight: 600; font-size: 0.95rem;">Bikramjeet Singh</span><br>
+                        <span style="font-size: 0.75rem; color: #d1d5db;">Project Manager</span>
                     </div>
-                    <button class="logout-btn" id="logout-btn">
+                    <button class="btn btn-danger" id="logout-btn" style="padding: 0.5rem; background: #ef4444;">
                         <i class="fas fa-sign-out-alt"></i>
                     </button>
-                </div>
-                <div class="last-update">
-                    <i class="fas fa-sync-alt"></i>
-                    <span id="last-update-time">Just now</span>
                 </div>
             </div>
         </header>
 
-        <!-- Navigation Tabs -->
-        <nav class="main-nav">
-            <div class="nav-container">
+        <!-- Navigation -->
+        <nav class="main-nav" style="background: #1f2937; padding: 0 2rem; border-bottom: 1px solid #374151;">
+            <div class="nav-container" style="display: flex; gap: 0.5rem; padding: 0.5rem 0; overflow-x: auto;">
                 <button class="nav-btn active" data-tab="dashboard">
                     <i class="fas fa-tachometer-alt"></i>
                     <span>Dashboard</span>
                 </button>
-                <button class="nav-btn" data-tab="work-tracking">
+                <button class="nav-btn" data-tab="work">
                     <i class="fas fa-tasks"></i>
                     <span>Work Tracking</span>
                 </button>
                 <button class="nav-btn" data-tab="infrastructure">
                     <i class="fas fa-network-wired"></i>
                     <span>Infrastructure</span>
-                </button>
-                <button class="nav-btn" data-tab="chambers">
-                    <i class="fas fa-hdd"></i>
-                    <span>Chambers</span>
-                </button>
-                <button class="nav-btn" data-tab="analytics">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Analytics</span>
                 </button>
                 <button class="nav-btn" data-tab="reports">
                     <i class="fas fa-file-alt"></i>
@@ -159,62 +426,689 @@
             </div>
         </nav>
 
-        <!-- Main Content Area -->
+        <!-- Main Content -->
         <main class="main-content">
             <!-- Dashboard Tab -->
             <div class="tab-content active" id="dashboard">
-                <!-- Dashboard content will be loaded here -->
+                <div style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard Overview
+                    </h2>
+                    
+                    <div class="dashboard-grid">
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                <div style="width: 48px; height: 48px; border-radius: 8px; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-ruler-combined" style="color: #3b82f6; font-size: 1.5rem;"></i>
+                                </div>
+                                <div style="color: #10b981; display: flex; align-items: center; gap: 0.25rem;">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span>12%</span>
+                                </div>
+                            </div>
+                            <h3 style="color: #d1d5db; font-size: 0.95rem; margin-bottom: 0.25rem;">Total Work Scope</h3>
+                            <div class="stat-value" id="stat-total-scope" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0 m</div>
+                            <div style="background: #374151; height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div style="background: #3b82f6; height: 100%; width: 65%;"></div>
+                            </div>
+                            <div style="font-size: 0.875rem; color: #9ca3af; margin-top: 0.5rem;">65% completed</div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                                <div style="width: 48px; height: 48px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.5rem;"></i>
+                                </div>
+                                <div style="color: #10b981; display: flex; align-items: center; gap: 0.25rem;">
+                                    <i class="fas fa-arrow-up"></i>
+                                    <span>8%</span>
+                                </div>
+                            </div>
+                            <h3 style="color: #d1d5db; font-size: 0.95rem; margin-bottom: 0.25rem;">Completed Work</h3>
+                            <div class="stat-value" id="stat-completed" style="font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem;">0 m</div>
+                            <div style="background: #374151; height: 6px; border-radius: 3px; overflow: hidden;">
+                                <div style="background: #10b981; height: 100%; width: 82%;"></div>
+                            </div>
+                            <div style="font-size: 0.875rem; color: #9ca3af; margin-top: 0.5rem;">82% of target</div>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                            <h3 style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-chart-line"></i> Work Progress Trend
+                            </h3>
+                            <select class="form-control" style="width: auto;">
+                                <option value="7d">Last 7 Days</option>
+                                <option value="30d" selected>Last 30 Days</option>
+                            </select>
+                        </div>
+                        <div class="chart-wrapper">
+                            <canvas id="progress-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Work Tracking Tab -->
-            <div class="tab-content" id="work-tracking">
-                <!-- Work Tracking content will be loaded here -->
+            <div class="tab-content" id="work">
+                <div style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-tasks"></i> Daily Work Input
+                    </h2>
+                    
+                    <div class="form-card">
+                        <form id="work-form">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                <div class="form-group">
+                                    <label><i class="fas fa-cube"></i> Select Block</label>
+                                    <select class="form-control" id="block-select" required>
+                                        <option value="">-- Select Block --</option>
+                                        <option value="Chohla Sahib">Chohla Sahib</option>
+                                        <option value="Naushehra Pannuan">Naushehra Pannuan</option>
+                                        <option value="Bikhiwind">Bikhiwind</option>
+                                        <option value="Gandiwind">Gandiwind</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-cogs"></i> Work Machine</label>
+                                    <select class="form-control" id="machine-number" required>
+                                        <option value="1">Machine 1</option>
+                                        <option value="2">Machine 2</option>
+                                        <option value="3">Machine 3</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-calendar-alt"></i> Date</label>
+                                    <input type="date" class="form-control" id="work-date" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-tape"></i> Work Done (Meters)</label>
+                                    <input type="number" class="form-control" id="work-done" step="0.01" min="0" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label><i class="fas fa-file-alt"></i> Work Description</label>
+                                <input type="text" class="form-control" id="work-description" placeholder="Brief description of work done">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus"></i> Add Daily Work
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-chart-bar"></i> Recent Work Entries
+                        </h3>
+                        <div id="work-table-container" style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Block</th>
+                                        <th>Machine</th>
+                                        <th>Work Done</th>
+                                        <th>Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="work-table-body">
+                                    <!-- Work entries will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Infrastructure Tab -->
             <div class="tab-content" id="infrastructure">
-                <!-- Infrastructure content will be loaded here -->
-            </div>
-
-            <!-- Chambers Tab -->
-            <div class="tab-content" id="chambers">
-                <!-- Chambers content will be loaded here -->
-            </div>
-
-            <!-- Analytics Tab -->
-            <div class="tab-content" id="analytics">
-                <!-- Analytics content will be loaded here -->
+                <div style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-network-wired"></i> Infrastructure Status
+                    </h2>
+                    
+                    <div class="form-card">
+                        <form id="infra-form">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                                <div class="form-group">
+                                    <label><i class="fas fa-cube"></i> Block Name</label>
+                                    <select class="form-control" id="infra-block" required>
+                                        <option value="">-- Select Block --</option>
+                                        <option value="Chohla Sahib">Chohla Sahib</option>
+                                        <option value="Naushehra Pannuan">Naushehra Pannuan</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-map-pin"></i> GP Name</label>
+                                    <input type="text" class="form-control" id="gp-name" placeholder="Enter GP name" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label><i class="fas fa-signal"></i> Live Status</label>
+                                    <select class="form-control" id="live-status" required>
+                                        <option value="">-- Select Status --</option>
+                                        <option value="Live">Live</option>
+                                        <option value="Not Live">Not Live</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-plus"></i> Add Infrastructure
+                            </button>
+                        </form>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <h3 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-table"></i> Infrastructure Status Report
+                        </h3>
+                        <div id="infra-table-container" style="overflow-x: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Block</th>
+                                        <th>GP Name</th>
+                                        <th>Live Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="infra-table-body">
+                                    <!-- Infrastructure entries will be loaded here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Reports Tab -->
             <div class="tab-content" id="reports">
-                <!-- Reports content will be loaded here -->
+                <div style="padding: 2rem;">
+                    <h2 style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-file-alt"></i> Reports & Export
+                    </h2>
+                    
+                    <div class="dashboard-grid">
+                        <div class="stat-card">
+                            <div style="text-align: center;">
+                                <div style="width: 64px; height: 64px; border-radius: 12px; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                                    <i class="fas fa-file-excel" style="color: #3b82f6; font-size: 2rem;"></i>
+                                </div>
+                                <h3 style="color: #d1d5db; margin-bottom: 0.5rem;">Export Work Data</h3>
+                                <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 1rem;">Export all work entries to Excel</p>
+                                <button class="btn btn-primary" id="export-work-btn">
+                                    <i class="fas fa-download"></i> Export to Excel
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div style="text-align: center;">
+                                <div style="width: 64px; height: 64px; border-radius: 12px; background: rgba(16, 185, 129, 0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                                    <i class="fas fa-file-pdf" style="color: #10b981; font-size: 2rem;"></i>
+                                </div>
+                                <h3 style="color: #d1d5db; margin-bottom: 0.5rem;">Generate Report</h3>
+                                <p style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 1rem;">Generate detailed PDF report</p>
+                                <button class="btn btn-success" id="generate-report-btn">
+                                    <i class="fas fa-file-pdf"></i> Generate PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
 
         <!-- Footer -->
-        <footer class="main-footer">
-            <div class="footer-content">
-                <div class="footer-left">
-                    <p><i class="fas fa-copyright"></i> 2024-2025 BharatNet | Optical Fiber Work Tracking System</p>
-                    <p class="footer-version">Version 2.0 | Cloud Enabled</p>
+        <footer style="background: #1f2937; padding: 1rem 2rem; border-top: 1px solid #374151; margin-top: auto;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <p style="color: #d1d5db; font-size: 0.875rem;">
+                        <i class="fas fa-copyright"></i> 2024-2025 BharatNet | Optical Fiber Work Tracking System
+                    </p>
                 </div>
-                <div class="footer-right">
-                    <div class="connection-status">
+                <div style="display: flex; align-items: center; gap: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; color: #10b981;">
                         <i class="fas fa-cloud" id="cloud-status-icon"></i>
                         <span id="cloud-status-text">Connected to Cloud</span>
-                    </div>
-                    <div class="data-status">
-                        <i class="fas fa-database"></i>
-                        <span id="data-count">0 records</span>
                     </div>
                 </div>
             </div>
         </footer>
     </div>
 
-    <!-- JavaScript Files -->
-    <script src="supabase.js"></script>
-    <script src="script.js"></script>
+    <!-- JAVASCRIPT -->
+    <script>
+        // ============================================
+        // APPLICATION CONFIGURATION
+        // ============================================
+        // IMPORTANT: Replace these with your actual Supabase credentials
+        const SUPABASE_URL = 'https://YOUR-PROJECT-ID.supabase.co';
+        const SUPABASE_KEY = 'YOUR-ANON-PUBLIC-KEY';
+        
+        let supabase = null;
+        let currentUser = null;
+        let appData = {
+            workEntries: [],
+            infrastructureEntries: []
+        };
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        async function initializeApp() {
+            // Initialize Supabase client
+            if (SUPABASE_URL.includes('YOUR-PROJECT-ID') || SUPABASE_KEY.includes('YOUR-ANON')) {
+                showError('Please update your Supabase credentials in the JavaScript code');
+                return;
+            }
+
+            try {
+                supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                console.log('Supabase client initialized');
+            } catch (error) {
+                console.error('Failed to initialize Supabase:', error);
+                showError('Failed to connect to database');
+                return;
+            }
+
+            // Check authentication
+            const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+            
+            if (isLoggedIn) {
+                await handleSuccessfulLogin();
+            } else {
+                document.getElementById('login-modal').style.display = 'flex';
+                document.getElementById('loading-screen').style.display = 'none';
+            }
+
+            setupEventListeners();
+            initializeCharts();
+        }
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            // Simple authentication (replace with Supabase Auth in production)
+            if (username === '101214' && password === '101214') {
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('loginTime', Date.now());
+                
+                document.getElementById('login-error').style.display = 'none';
+                await handleSuccessfulLogin();
+                showSuccess('Login successful!');
+            } else {
+                document.getElementById('login-error').style.display = 'block';
+            }
+        });
+
+        async function handleSuccessfulLogin() {
+            document.getElementById('login-modal').style.display = 'none';
+            document.getElementById('main-container').style.display = 'block';
+            document.getElementById('loading-screen').style.display = 'none';
+            
+            // Load initial data
+            await loadDashboardData();
+            await loadWorkEntries();
+            await loadInfrastructureEntries();
+            
+            // Update last update time
+            updateLastUpdateTime();
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', function() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('isLoggedIn');
+                localStorage.removeItem('loginTime');
+                location.reload();
+            }
+        });
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function setupEventListeners() {
+            // Navigation buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Update active button
+                    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show active tab
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelectorAll('.tab-content').forEach(tab => {
+                        tab.classList.remove('active');
+                    });
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+
+            // Work form submission
+            document.getElementById('work-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const workData = {
+                    block: document.getElementById('block-select').value,
+                    machineNumber: document.getElementById('machine-number').value,
+                    date: document.getElementById('work-date').value,
+                    workDone: parseFloat(document.getElementById('work-done').value),
+                    description: document.getElementById('work-description').value
+                };
+                
+                if (workData.block && workData.date && !isNaN(workData.workDone)) {
+                    await saveWorkEntry(workData);
+                }
+            });
+
+            // Infrastructure form submission
+            document.getElementById('infra-form').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const infraData = {
+                    block: document.getElementById('infra-block').value,
+                    gpName: document.getElementById('gp-name').value,
+                    liveStatus: document.getElementById('live-status').value
+                };
+                
+                if (infraData.block && infraData.gpName && infraData.liveStatus) {
+                    await saveInfrastructureEntry(infraData);
+                }
+            });
+
+            // Export buttons
+            document.getElementById('export-work-btn').addEventListener('click', exportWorkData);
+            document.getElementById('generate-report-btn').addEventListener('click', generateReport);
+        }
+
+        // ============================================
+        // DATA OPERATIONS
+        // ============================================
+        async function loadDashboardData() {
+            try {
+                // Simulate loading data
+                const mockData = {
+                    totalScope: 12500,
+                    completed: 8125,
+                    liveRate: 78
+                };
+                
+                // Update UI
+                document.getElementById('stat-total-scope').textContent = `${mockData.totalScope.toLocaleString()} m`;
+                document.getElementById('stat-completed').textContent = `${mockData.completed.toLocaleString()} m`;
+                document.getElementById('header-total-scope').textContent = `${(mockData.totalScope / 1000).toFixed(1)} km`;
+                document.getElementById('header-completed').textContent = `${(mockData.completed / 1000).toFixed(1)} km`;
+                document.getElementById('header-live').textContent = `${mockData.liveRate}%`;
+                
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showError('Failed to load dashboard data');
+            }
+        }
+
+        async function loadWorkEntries() {
+            try {
+                // In production, fetch from Supabase
+                // const { data, error } = await supabase.from('daily_work').select('*');
+                
+                // For demo, use mock data
+                const mockWorkEntries = [
+                    { id: 1, date: '2024-01-15', block: 'Chohla Sahib', machine: 'Machine 1', workDone: 250.5, description: 'Fiber laying' },
+                    { id: 2, date: '2024-01-14', block: 'Naushehra', machine: 'Machine 2', workDone: 180.0, description: 'Duct installation' }
+                ];
+                
+                appData.workEntries = mockWorkEntries;
+                updateWorkTable();
+                
+            } catch (error) {
+                console.error('Error loading work entries:', error);
+            }
+        }
+
+        async function loadInfrastructureEntries() {
+            try {
+                // In production, fetch from Supabase
+                // const { data, error } = await supabase.from('infrastructure').select('*');
+                
+                // For demo, use mock data
+                const mockInfraEntries = [
+                    { id: 1, block: 'Chohla Sahib', gpName: 'GP-001', liveStatus: 'Live' },
+                    { id: 2, block: 'Naushehra', gpName: 'GP-002', liveStatus: 'Not Live' }
+                ];
+                
+                appData.infrastructureEntries = mockInfraEntries;
+                updateInfrastructureTable();
+                
+            } catch (error) {
+                console.error('Error loading infrastructure entries:', error);
+            }
+        }
+
+        async function saveWorkEntry(workData) {
+            try {
+                // In production, save to Supabase
+                // const { data, error } = await supabase.from('daily_work').insert(workData);
+                
+                // For demo, add to local array
+                workData.id = Date.now();
+                appData.workEntries.unshift(workData);
+                
+                updateWorkTable();
+                showSuccess('Work entry saved successfully!');
+                
+                // Reset form
+                document.getElementById('work-form').reset();
+                document.getElementById('work-date').valueAsDate = new Date();
+                
+            } catch (error) {
+                console.error('Error saving work entry:', error);
+                showError('Failed to save work entry');
+            }
+        }
+
+        async function saveInfrastructureEntry(infraData) {
+            try {
+                // In production, save to Supabase
+                // const { data, error } = await supabase.from('infrastructure').insert(infraData);
+                
+                // For demo, add to local array
+                infraData.id = Date.now();
+                appData.infrastructureEntries.unshift(infraData);
+                
+                updateInfrastructureTable();
+                showSuccess('Infrastructure entry saved successfully!');
+                
+                // Reset form
+                document.getElementById('infra-form').reset();
+                
+            } catch (error) {
+                console.error('Error saving infrastructure entry:', error);
+                showError('Failed to save infrastructure entry');
+            }
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+        function updateWorkTable() {
+            const tbody = document.getElementById('work-table-body');
+            tbody.innerHTML = '';
+            
+            appData.workEntries.forEach(entry => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${entry.date}</td>
+                    <td>${entry.block}</td>
+                    <td>${entry.machine}</td>
+                    <td>${entry.workDone.toFixed(2)} m</td>
+                    <td>${entry.description || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateInfrastructureTable() {
+            const tbody = document.getElementById('infra-table-body');
+            tbody.innerHTML = '';
+            
+            appData.infrastructureEntries.forEach(entry => {
+                const statusClass = entry.liveStatus === 'Live' ? 'status-live' : 'status-not-live';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${entry.block}</td>
+                    <td>${entry.gpName}</td>
+                    <td><span class="status-badge ${statusClass}">${entry.liveStatus}</span></td>
+                    <td>
+                        <button class="btn" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const formattedHours = hours % 12 || 12;
+            
+            // You can add this to your header if needed
+            console.log(`Last updated: ${formattedHours}:${minutes.toString().padStart(2, '0')} ${ampm}`);
+        }
+
+        // ============================================
+        // CHARTS
+        // ============================================
+        function initializeCharts() {
+            // Progress Chart
+            const progressCtx = document.getElementById('progress-chart').getContext('2d');
+            new Chart(progressCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                    datasets: [{
+                        label: 'Work Completed (m)',
+                        data: [1200, 1850, 2100, 2975],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#f3f4f6' }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#f3f4f6' }
+                        },
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                            ticks: { color: '#f3f4f6' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // EXPORT & REPORTS
+        // ============================================
+        function exportWorkData() {
+            try {
+                const ws = XLSX.utils.json_to_sheet(appData.workEntries);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Work Data');
+                XLSX.writeFile(wb, `Work_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
+                showSuccess('Work data exported successfully!');
+            } catch (error) {
+                console.error('Error exporting work data:', error);
+                showError('Failed to export work data');
+            }
+        }
+
+        function generateReport() {
+            showSuccess('PDF report generation started...');
+            // In production, implement PDF generation here
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function showSuccess(message) {
+            const successElement = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            
+            successText.textContent = message;
+            successElement.classList.add('show');
+            
+            setTimeout(() => {
+                successElement.classList.remove('show');
+            }, 3000);
+        }
+
+        function showError(message) {
+            const successElement = document.getElementById('success-message');
+            const successText = document.getElementById('success-text');
+            
+            successText.textContent = message;
+            successElement.style.background = '#ef4444';
+            successElement.classList.add('show');
+            
+            setTimeout(() => {
+                successElement.classList.remove('show');
+                successElement.style.background = '#10b981';
+            }, 3000);
+        }
+
+        // ============================================
+        // INITIAL SETUP
+        // ============================================
+        // Set default date to today
+        document.getElementById('work-date').valueAsDate = new Date();
+        
+        // Check cloud status periodically
+        setInterval(() => {
+            const statusIcon = document.getElementById('cloud-status-icon');
+            const statusText = document.getElementById('cloud-status-text');
+            
+            if (Math.random() > 0.1) { // Simulate connection
+                statusIcon.style.color = '#10b981';
+                statusText.textContent = 'Connected to Cloud';
+            } else {
+                statusIcon.style.color = '#ef4444';
+                statusText.textContent = 'Connection Lost';
+            }
+        }, 10000);
+    </script>
 </body>
 </html>
